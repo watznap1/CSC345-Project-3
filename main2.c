@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-main (int argc, char** argv) {
+int main (int argc, char** argv) {
 
     FILE *addresses = fopen(argv[1], "r");
     FILE *backing_store = fopen("BACKING_STORE.bin", "rb");
@@ -12,7 +12,7 @@ main (int argc, char** argv) {
     int page_table[256];
     int tlb_page[16];
     int tlb_frame[16];
-    signed char physical_memory[256][256];
+    signed char physical_memory[128][256];
 
     for (int i = 0; i < 256; i++) {
         page_table[i] = -1;
@@ -39,7 +39,7 @@ main (int argc, char** argv) {
 
         int frame_number = -1;
 
-        //check tlb
+        /*check tlb*/
         for (int i = 0; i < 16; i++) {
             if (tlb_page[i] == page_number) {
                 frame_number = tlb_frame[i];
@@ -48,19 +48,42 @@ main (int argc, char** argv) {
             }
         }
 
-        //TO DO: tlb miss
+        /*tlb miss*/
+        if (frame_number == -1) {
+            frame_number = page_table[page_number];
 
-        //get physical stuff
+            if (frame_number == -1) {
+                page_faults++;
+                frame_number = next_frame;
+                next_frame++;
+
+                fseek(backing_store, page_number * 256, SEEK_SET);
+                fread(physical_memory[frame_number], 1, 256, backing_store);
+
+                page_table[page_number] = frame_number;
+            }
+
+            /*fifo tlb update*/
+            tlb_page[tlb_idx] = page_number;
+            tlb_frame[tlb_idx] = frame_number;
+            tlb_idx = (tlb_idx + 1) % 16;
+        }
+
+        /*get physical */
         int physical_address = (frame_number << 8) | offset;
         signed char value = physical_memory[frame_number][offset];
 
-        //print to output files
+        /*print to output files*/
         fprintf(out1, "%d\n", logical_address);
         fprintf(out2, "%d\n", physical_address);
         fprintf(out3, "%d\n", (int)value);
     }
 
-    //print stats
+    /*print stats for statistics*/
+    printf("Page Faults: %d\n", page_faults);
+    printf("Page Fault Rate: %.3f\n", (double)page_faults / total_addresses);
+    printf("TLB Hits: %d\n", tlb_hits);
+    printf("TLB Hit Rate: %.3f\n", (double)tlb_hits / total_addresses);
 
 
     fclose(addresses);
