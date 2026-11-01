@@ -12,10 +12,15 @@ int main (int argc, char** argv) {
     int page_table[256];
     int tlb_page[16];
     int tlb_frame[16];
+
+    int fr[128];
     signed char physical_memory[128][256];
 
     for (int i = 0; i < 256; i++) {
         page_table[i] = -1;
+    }
+    for (int i = 0; i < 128; ++i) {
+        fr[i] = -1;
     }
     for (int i = 0; i < 16; i++) {
         tlb_page[i] = -1;
@@ -55,12 +60,27 @@ int main (int argc, char** argv) {
             if (frame_number == -1) {
                 page_faults++;
                 frame_number = next_frame;
-                next_frame++;
+                
+                int old_page = fr[next_frame];
+                if (old_page != -1) {
+                    page_table[old_page] = -1;
+
+                    for (int i = 0; i < 16; ++i) {
+                        if (tlb_page[i] == old_page) {
+                            tlb_page[i] = -1;
+                            tlb_frame[i] = -1;
+                            break;
+                        }
+                    }
+                }
 
                 fseek(backing_store, page_number * 256, SEEK_SET);
                 fread(physical_memory[frame_number], 1, 256, backing_store);
 
                 page_table[page_number] = frame_number;
+                fr[next_frame] = page_number;
+
+                next_frame = (next_frame + 1) % 128;
             }
 
             /*fifo tlb update*/
@@ -87,6 +107,7 @@ int main (int argc, char** argv) {
 
 
     fclose(addresses);
+    fclose(backing_store);
     fclose(out1);
     fclose(out2);
     fclose(out3);

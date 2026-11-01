@@ -87,6 +87,7 @@ int main (int argc, char** argv) {
 
 
     fclose(addresses);
+    fclose(backing_store);
     fclose(out1);
     fclose(out2);
     fclose(out3);
