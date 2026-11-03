@@ -3,7 +3,7 @@
 
 int main (int argc, char** argv) {
 
-    if (argc < 2)
+    if (argc < 2) //just stops execution if no address file was given
     {
         printf("Usage: %s addresses.txt\n", argv[0]);
         return 1;
@@ -15,6 +15,7 @@ int main (int argc, char** argv) {
     FILE *out2 = fopen("out2.txt", "w");
     FILE *out3 = fopen("out3.txt", "w");
 
+    //stop if any file doesnt open
     if (addresses == NULL || backing_store == NULL || out1 == NULL || out2 == NULL || out3 == NULL)
     {
         printf("File wasnt opened\n");
@@ -24,10 +25,10 @@ int main (int argc, char** argv) {
     int page_table[256];
     int tlb_page[16];
     int tlb_frame[16];
-    signed char physical_memory[128][256];
+    signed char physical_memory[128][256]; //physical memory limited to 128 frames, must replace once full
 
-    int frame_toPage[128];
-    int last_used[128];
+    int frame_toPage[128]; //which page is stored in each frame, used to target page we need to evict
+    int last_used[128]; //when each frame was last accessed
 
     for (int i = 0; i < 256; i++) {
         page_table[i] = -1;
@@ -37,7 +38,8 @@ int main (int argc, char** argv) {
         tlb_frame[i] = -1;
     }
 
-    for (int i = 0; i < 128; i++)
+    
+    for (int i = 0; i < 128; i++) //all frames start empty and unspent
     {
         frame_toPage[i] = -1;
         last_used[i] = 0;
@@ -49,7 +51,7 @@ int main (int argc, char** argv) {
     int tlb_hits = 0;
     int total_addresses = 0;
 
-    int timeForAccess = 0;
+    int timeForAccess = 0; //goes up by 1 for every address, essentialy works as a timestamp
     
     int logical_address;
 
@@ -79,17 +81,17 @@ int main (int argc, char** argv) {
                 page_faults++;
 
 
-                if (next_frame < 128)
+                if (next_frame < 128) //use free frame if one is available
                 {
                     frame_number = next_frame;
                     next_frame++;
 
                 }
-                else 
+                else //memory is full, replace the oldest used frame
                 {
                     int lru_frame = 0;
                     
-                    for (int i = 1; i < 128; i++)
+                    for (int i = 1; i < 128; i++) //finds the frame with the oldest time signature
                     {
                         if (last_used[i] < last_used[lru_frame])
                         {
@@ -101,9 +103,9 @@ int main (int argc, char** argv) {
 
                     int page_toRemove = frame_toPage[frame_number];
 
-                    page_table[page_toRemove] = -1;
+                    page_table[page_toRemove] = -1; //evicted page is no longer in mem, next access will cause page fault
 
-                    for ( int i = 0; i < 16; i++)
+                    for ( int i = 0; i < 16; i++) //remove evicted page from tlb so it cant point to the resued frame
                     {
                         if (tlb_page[i] == page_toRemove)
                         {
@@ -119,7 +121,7 @@ int main (int argc, char** argv) {
 
                 page_table[page_number] = frame_number;
 
-                frame_toPage[frame_number] = page_number;
+                frame_toPage[frame_number] = page_number; //records which page now lives in this  current frame
             }
 
             /*fifo tlb update*/
@@ -129,8 +131,9 @@ int main (int argc, char** argv) {
         }
         
 
-        timeForAccess++;
+        timeForAccess++; //updates the timestamp on every access, regardless if theres a tlb hit or not
         last_used[frame_number] = timeForAccess;
+
         /*get physical */
         int physical_address = (frame_number << 8) | offset;
         signed char value = physical_memory[frame_number][offset];
