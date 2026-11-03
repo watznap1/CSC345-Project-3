@@ -1,9 +1,9 @@
-#Experiemnt comparing FIFO AND LRU page replacement algo
+#Experiemnt comparing FIFA AND LRU page replacement algo
 
 import subprocess
 import matplotlib.pyplot as plt
 
-FRAME_COUNTS = [32, 64, 128, 256, 512, 1024] # different frame count nums that are being tested doubling starting from 32
+FRAME_COUNTS = [32, 64, 128, 256, 512] # different frame count nums that are being tested doubling starting from 32
 ADDRESS_FILE = "addresses.txt"
 
 #this is the most important section that prevents the needs of making tedious changes to our mains
